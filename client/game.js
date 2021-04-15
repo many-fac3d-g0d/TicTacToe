@@ -19,17 +19,26 @@ const wins = [
 [2, 4, 6]];
 
 socket.on('assign', (sign) =>{
-  playerSign = sign;
-  console.log("Player has been assigned ",playerSign);
+  if(sign!=="HouseFull"){
+    playerSign = sign;
+    console.log("Player has been assigned ",playerSign);
+  }
+  else{
+    window.alert("2 Players already connected - Server busy"); // Server is occupied remove the eventlisteners
+    reset.removeEventListener('click', fnreset);
+    for (let col of cols)
+      col.removeEventListener('click', play);
+    return;
+  }
 });
 
 function event(can) {
-  reset.addEventListener('click', fnreset);
   for (let col of cols)
   if (can)
-  col.addEventListener('click', play);else
-
-  col.removeEventListener('click', play);
+    col.addEventListener('click', play);
+  else
+    col.removeEventListener('click', play);
+    reset.addEventListener('click', fnreset);
 }
 event(true);
 function play(e) {
