@@ -16,13 +16,22 @@ io.on('connection',(socket) => {
 
     socket.on('new player',(room) => {
         var player = {};
-        console.log("Connected players :",players);
+        
         if(players.length===0)
-            player[socket.id] = 'X'
-        else
-            player[socket.id] = 'O'
-        players.push(player);
-        socket.emit('assign', player[socket.id]);
+            player[socket.id] = 'X'    //First Player
+        else if(players.length===1)
+            player[socket.id] = 'O'    //Second Player
+        
+        if(players.length<2){
+            
+            players.push(player);
+            console.log("Connected players :",players);
+            socket.emit('assign', player[socket.id]);
+
+        }else{
+            console.log("2 players already HouseFull");
+            socket.emit('assign', "HouseFull");
+        }
     });
 });
 
