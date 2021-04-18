@@ -7,16 +7,6 @@ const _ = document,
 cols = Array.from(_.querySelectorAll('.board > span')),
 reset = _.querySelector('#reset');
 let playerSign = 'O';
-let arr = new Array(9).fill(null);
-const wins = [
-[0, 1, 2],
-[3, 4, 5],
-[6, 7, 8],
-[0, 3, 6],
-[1, 4, 7],
-[2, 5, 8],
-[0, 4, 8],
-[2, 4, 6]];
 
 socket.on('assign', (sign) =>{
   if(sign!=="HouseFull"){
@@ -38,44 +28,51 @@ function event(can) {
     col.addEventListener('click', play);
   else
     col.removeEventListener('click', play);
-    reset.addEventListener('click', fnreset);
 }
 event(true);
 function play(e) {
   const __ = e.target;
   if (!__.innerHTML) {
-    __.innerHTML = playerSign === 'O' ? '<h1 name="O">O</h1>' : '<h1 name="X">X</h1>';
-    move(parseInt(__.id.split(/\D+/g)[1]), __.childNodes[0].getAttribute('name'));
+    move(parseInt(__.id.split(/\D+/g)[1]), playerSign);
   }
 }
 
 function move(ind, sign) {
-  arr[ind] = sign;
-  console.log(arr);
-
-  for (let i = 0; i < wins.length; i++) {
-    let [a, b, c] = wins[i];
-    if (cmp(arr[a], arr[b], arr[c])) {
-      console.log(sign, ' wins');
-      event(false);
-      cols[a].classList.add('win');
-      cols[b].classList.add('win');
-      cols[c].classList.add('win');
-      window.alert(`Player ${sign} has won`);
-      break;
-    }
-  }
-}
-function cmp(a, b, c) {
-  if (a && b && c)
-  return a === b && a === c && b === c;
+  socket.emit('move', ind, sign);
 }
 
-function fnreset() {
+socket.on('won',(sign,a,b,c,ind)=>{
+  console.log(sign, ' wins');
+  const span = document.getElementById(`col-${ind}`);
+  span.innerHTML = sign === 'O' ? '<h1 name="O">O</h1>' : '<h1 name="X">X</h1>';
+  event(false);
+  reset.addEventListener('click', fnreset);
+  cols[a].classList.add('win');
+  cols[b].classList.add('win');
+  cols[c].classList.add('win');
+  window.alert(`Player ${sign} has won`);
+});
+
+socket.on('update',(sign,ind)=>{
+  const span = document.getElementById(`col-${ind}`);
+  span.innerHTML = sign === 'O' ? '<h1 name="O">O</h1>' : '<h1 name="X">X</h1>';
+  if(playerSign===sign)
+    event(false);
+  else
+    event(true);
+});
+
+socket.on('reset',(resetPlayer) => {
+
+  window.alert(`Player ${resetPlayer} has reset the game`);
   for (let col of cols) {
     col.classList.remove('win');
     col.innerHTML = '';
   }
-  arr = new Array(9).fill(null);
   event(true);
+  reset.removeEventListener('click', fnreset);
+});
+
+function fnreset() {
+  socket.emit('reset',playerSign);
 }

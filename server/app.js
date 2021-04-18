@@ -8,14 +8,42 @@ const io = require("socket.io")(http,{
     cors : {origin : "*"}
 });
 
-var players = [];
-var rooms = [];
+let players = [];
+let rooms = [];
+let game = new Array(9).fill(null);
+
+const wins = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6]];
+
+function cmp(a, b, c) {
+    if (a && b && c)
+    return a === b && a === c && b === c;
+    }
+
+function hasWon(){
+    let won = false;
+    for (let i = 0; i < wins.length; i++) {
+        let [a, b, c] = wins[i];
+        if (cmp(game[a], game[b], game[c])) {
+            won = true;
+            return [won, a, b, c];
+        }
+    }
+    return [false,0,0,0];
+}
 
 io.on('connection',(socket) => {
     console.log("A new user has connected : ",socket.id);
 
     socket.on('new player',(room) => {
-        var player = {};
+        let player = {};
         
         if(players.length===0)
             player[socket.id] = 'X'    //First Player
@@ -32,6 +60,26 @@ io.on('connection',(socket) => {
             console.log("2 players already HouseFull");
             socket.emit('assign', "HouseFull");
         }
+    });
+
+    socket.on('move',(ind,sign) => {
+        console.log("Received values :",ind,sign);
+        game[ind] = sign;
+        console.log("Game state : ",game);
+        let wonValues = hasWon();
+        if(wonValues[0]){
+            console.log(`Player ${sign} has won`);
+            io.emit('won',sign,wonValues[1],wonValues[2],wonValues[3],ind);
+            game.fill(null); // Game Over reset game state
+        }
+        else
+            io.emit('update',sign,ind);
+    });
+
+    socket.on('reset',(playerSign) => {
+        console.log("Reset the game");
+        game.fill(null);
+        io.emit('reset',playerSign);
     });
 });
 
