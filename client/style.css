@@ -27,6 +27,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   grid-gap: 8px;
   padding: 12px;
+  margin-top: 200px;
 }
 
 .board > span {
@@ -56,4 +57,19 @@ body {
 
 .win {
   background: #55efc4 !important;
+}
+
+footer{
+  display: inline-block;
+  margin-top: 50px;
+  color:black;
+  text-align: center;
+}
+
+.reset-btn{
+  margin: auto;
+}
+
+.footer{
+  margin: auto;
 }

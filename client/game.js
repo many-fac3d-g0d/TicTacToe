@@ -1,5 +1,5 @@
 
-const socket = io('ws://localhost:8080');
+const socket = io();
 
 socket.emit('new player');
 
@@ -8,10 +8,20 @@ cols = Array.from(_.querySelectorAll('.board > span')),
 reset = _.querySelector('#reset');
 let playerSign = 'O';
 
+socket.on('connectedEvent',(connectedPlayers)=>{
+  
+  const connected = document.getElementById('connected');
+  connected.innerHTML = `Players connected : ${connectedPlayers}`;
+  
+});
+
 socket.on('assign', (sign) =>{
   if(sign!=="HouseFull"){
     playerSign = sign;
     console.log("Player has been assigned ",playerSign);
+
+    const symbol = document.getElementById('symbol');
+    symbol.innerHTML = `Your sign : ${sign}`;
   }
   else{
     window.alert("2 Players already connected - Server busy"); // Server is occupied remove the eventlisteners
@@ -62,9 +72,31 @@ socket.on('update',(sign,ind)=>{
     event(true);
 });
 
+socket.on('draw',(sign,ind)=>{
+  const span = document.getElementById(`col-${ind}`);
+  span.innerHTML = sign === 'O' ? '<h1 name="O">O</h1>' : '<h1 name="X">X</h1>';
+  window.alert("Game tied - reset the game to play again");
+  event(false);
+  reset.addEventListener('click', fnreset);
+});
+
 socket.on('reset',(resetPlayer) => {
 
   window.alert(`Player ${resetPlayer} has reset the game`);
+  for (let col of cols) {
+    col.classList.remove('win');
+    col.innerHTML = '';
+  }
+  event(true);
+  reset.removeEventListener('click', fnreset);
+});
+
+socket.on('playerDisconnected',(disconnectedPlayer,connectedPlayers) => {
+  window.alert(`Sorry Player ${disconnectedPlayer} has disconnected, resetting the game`);
+
+  const connected = document.getElementById('connected');
+  connected.innerHTML = `Players connected : ${connectedPlayers}`;
+
   for (let col of cols) {
     col.classList.remove('win');
     col.innerHTML = '';

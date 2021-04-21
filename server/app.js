@@ -1,14 +1,13 @@
-const http = require('http').createServer();
-
-const clientHttp = require('http');
+const http = require('http');
 
 const fs = require('fs');
 
-const io = require("socket.io")(http,{
-    cors : {origin : "*"}
-});
+const socketIO = require("socket.io");
+const { sign } = require('crypto');
 
+const PORT = process.env.PORT || 8000;
 let players = [];
+let signs = [];
 let rooms = [];
 let game = new Array(9).fill(null);
 
@@ -39,51 +38,8 @@ function hasWon(){
     return [false,0,0,0];
 }
 
-io.on('connection',(socket) => {
-    console.log("A new user has connected : ",socket.id);
 
-    socket.on('new player',(room) => {
-        let player = {};
-        
-        if(players.length===0)
-            player[socket.id] = 'X'    //First Player
-        else if(players.length===1)
-            player[socket.id] = 'O'    //Second Player
-        
-        if(players.length<2){
-            
-            players.push(player);
-            console.log("Connected players :",players);
-            socket.emit('assign', player[socket.id]);
-
-        }else{
-            console.log("2 players already HouseFull");
-            socket.emit('assign', "HouseFull");
-        }
-    });
-
-    socket.on('move',(ind,sign) => {
-        console.log("Received values :",ind,sign);
-        game[ind] = sign;
-        console.log("Game state : ",game);
-        let wonValues = hasWon();
-        if(wonValues[0]){
-            console.log(`Player ${sign} has won`);
-            io.emit('won',sign,wonValues[1],wonValues[2],wonValues[3],ind);
-            game.fill(null); // Game Over reset game state
-        }
-        else
-            io.emit('update',sign,ind);
-    });
-
-    socket.on('reset',(playerSign) => {
-        console.log("Reset the game");
-        game.fill(null);
-        io.emit('reset',playerSign);
-    });
-});
-
-const app = clientHttp.createServer((req,res) => {
+const app = http.createServer((req,res) => {
     console.log(req.method, req.url);
     
     switch(req.url){
@@ -128,5 +84,96 @@ const app = clientHttp.createServer((req,res) => {
 
 });
 
-http.listen(8080, () => console.log("Server started at http://localhost:8080/") );
-app.listen(8000, () => console.log("Index.html served at http://localhost:8000/"));
+
+app.listen(PORT, () => console.log(`Index.html served at http://localhost:${PORT}/`));
+
+const io = socketIO(app);
+
+io.on('connection',(socket) => {
+    console.log("A new user has connected : ",socket.id);
+
+    socket.on('new player',(room) => {
+        let player = {};
+        
+        if(!(signs.includes('X'))){
+            player['socketId'] = socket.id;
+            player['sign'] = 'X';
+            signs.push('X');
+        }
+        else{
+            player['socketId'] = socket.id;
+            player['sign'] = 'O';
+            signs.push('O');
+        }
+        if(players.length<2){
+            
+            players.push(player);
+            console.log("Connected players :",players);
+            socket.emit('assign', player['sign']); // Emit to particular socket the assigned sign for players
+            io.emit('connectedEvent', players.length); // Emit to all the no of players online
+            if(game.includes('X')){ // If connected player has made first move already
+                let sign = 'X';
+                let ind = game.indexOf('X');
+                socket.emit('update',sign,ind);
+            }
+            else if(game.includes('O')){
+                let sign = 'O';
+                let ind = game.indexOf('O');
+                socket.emit('update',sign,ind);
+            }
+
+        }else{
+            console.log("2 players already HouseFull");
+            socket.emit('assign', "HouseFull");
+        }
+    });
+
+    socket.on('move',(ind,sign) => {
+        console.log("Received values :",ind,sign);
+        game[ind] = sign;
+        console.log("Game state : ",game);
+        let wonValues = hasWon();
+        if(wonValues[0]){
+            console.log(`Player ${sign} has won`);
+            io.emit('won',sign,wonValues[1],wonValues[2],wonValues[3],ind);
+            game.fill(null); // Game Over reset game state
+        }
+        else if(!(game.includes(null))){ // All positions in board played and still not won - draw
+            console.log("Game tied");
+            io.emit('draw',sign,ind);
+        }
+        else
+            io.emit('update',sign,ind);
+    });
+
+    socket.on('reset',(playerSign) => {
+        console.log("Reset the game");
+        game.fill(null);
+        io.emit('reset',playerSign);
+    });
+
+    socket.on('disconnect',(reason) => {
+        console.log(`Client disconnected : ${reason} , socketId : ${socket.id}`);
+        if(reason === "transport close"){//Ping timeouts can cause disconnect event
+
+            if(players.length>1){
+
+                removePlayer = players.filter(player => player['socketId']===socket.id);
+                removePlayer = removePlayer[0];
+                players = players.filter(player => player['socketId'] !==socket.id);
+                signs = signs.filter(sign => sign !== removePlayer['sign']);
+
+            }else{// Last player is leaving, reset instead of filtering
+                players = [];
+                signs = [];
+            }
+
+            console.log("Connected Players : ",players);
+            game.fill(null);// Player disconnected reset game
+            io.emit('playerDisconnected',removePlayer['sign'],players.length);
+        }
+        
+    });
+
+});
+
