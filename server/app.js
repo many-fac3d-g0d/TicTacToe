@@ -3,7 +3,6 @@ const http = require('http');
 const fs = require('fs');
 
 const socketIO = require("socket.io");
-const { sign } = require('crypto');
 
 const PORT = process.env.PORT || 8000;
 let players = [];
@@ -130,7 +129,8 @@ io.on('connection',(socket) => {
 
     socket.on('move',(ind,sign) => {
         console.log("Received values :",ind,sign);
-        game[ind] = sign;
+        if(!(game[ind])) // Only update game board if not updated already
+            game[ind] = sign;
         console.log("Game state : ",game);
         let wonValues = hasWon();
         if(wonValues[0]){
@@ -143,7 +143,7 @@ io.on('connection',(socket) => {
             io.emit('draw',sign,ind);
         }
         else
-            io.emit('update',sign,ind);
+            io.emit('update',game[ind],ind);
     });
 
     socket.on('reset',(playerSign) => {
@@ -154,7 +154,7 @@ io.on('connection',(socket) => {
 
     socket.on('disconnect',(reason) => {
         console.log(`Client disconnected : ${reason} , socketId : ${socket.id}`);
-        if(reason === "transport close"){//Ping timeouts can cause disconnect event
+        if(reason === "transport close"){//Ping timeouts can cause disconnect event during long polling from socket.io
 
             if(players.length>1){
 
