@@ -64,7 +64,7 @@ const app = http.createServer((req,res) => {
             });
             break;
         case '/style.css':
-            fs.readFile('../client/style.css',(err,data) => {
+            fs.readFile('./client/style.css',(err,data) => {
                 if(err){
                     console.log("Err in reading style.css",err);
                 }else{
