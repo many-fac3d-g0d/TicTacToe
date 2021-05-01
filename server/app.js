@@ -44,7 +44,7 @@ const app = http.createServer((req,res) => {
     switch(req.url){
         case '/':
             res.setHeader('Content-Type','text/html');
-            fs.readFile('../client/index.html',(err,data) => {
+            fs.readFile('./client/index.html',(err,data) => {
                 if(err){
                     console.log("Err in reading index.html",err);
                 }else{
@@ -54,7 +54,7 @@ const app = http.createServer((req,res) => {
             });
             break;
         case '/game.js':
-            fs.readFile('../client/game.js',(err,data) => {
+            fs.readFile('./client/game.js',(err,data) => {
                 if(err){
                     console.log("Err in reading front.js",err);
                 }else{
