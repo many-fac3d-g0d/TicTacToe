@@ -155,14 +155,12 @@ io.on('connection',(socket) => {
     socket.on('disconnect',(reason) => {
         console.log(`Client disconnected : ${reason} , socketId : ${socket.id}`);
         if(reason === "transport close"){//Ping timeouts can cause disconnect event during long polling from socket.io
-
             if(players.length>1){
-
-                removePlayer = players.filter(player => player['socketId']===socket.id);
+                let removePlayer = players.filter(player => player['socketId']===socket.id);
                 removePlayer = removePlayer[0];
                 players = players.filter(player => player['socketId'] !==socket.id);
                 signs = signs.filter(sign => sign !== removePlayer['sign']);
-
+                io.emit('playerDisconnected',removePlayer['sign'],players.length);
             }else{// Last player is leaving, reset instead of filtering
                 players = [];
                 signs = [];
@@ -170,7 +168,6 @@ io.on('connection',(socket) => {
 
             console.log("Connected Players : ",players);
             game.fill(null);// Player disconnected reset game
-            io.emit('playerDisconnected',removePlayer['sign'],players.length);
         }
         
     });
